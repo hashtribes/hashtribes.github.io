@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HashTribes Protocol</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            dark: '#0f172a',
+                            surface: '#1e293b',
+                            accent: '#34d399', // Emerald Green
+                            accentHover: '#10b981',
+                            text: '#f8fafc',
+                            muted: '#94a3b8'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; }
+        .checkbox-wrapper input:checked + div {
+            background-color: rgba(52, 211, 153, 0.2);
+            border-color: #34d399;
+            color: #34d399;
+        }
+        .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .7; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-brand-dark">
+
+    <div id="app" class="flex-grow flex flex-col items-center pb-20">
+        
+        <header class="w-full py-8 px-6 text-center border-b border-brand-surface bg-brand-dark/95 sticky top-0 z-50 backdrop-blur-md">
+            <h1 class="text-3xl md:text-5xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-brand-accent to-blue-500 mb-2">
+                <i class="fa-solid fa-fingerprint mr-2"></i>HashTribes
+            </h1>
+            <p class="text-brand-muted text-sm md:text-base max-w-xl mx-auto">
+                Protocolo de conexão descentralizada. Gere sua identidade, encontre sua tribo.
+            </p>
+        </header>
+
+        <main class="w-full max-w-3xl px-6 mt-10 space-y-12">
+
+            <div class="bg-brand-surface p-6 rounded-2xl border border-white/5 shadow-xl">
+                <h3 class="text-brand-accent font-mono text-sm mb-2 uppercase tracking-widest"><i class="fa-solid fa-terminal mr-2"></i>Sistema Iniciado</h3>
+                <p class="text-gray-300 leading-relaxed">
+                    Este sistema converte sua personalidade em um <strong>código único universal</strong>. 
+                    Selecione o que te define. O algoritmo usará lógica bitwise para criar sua HashTag.
+                    <span class="block mt-2 text-xs text-brand-muted">Nota: Nenhuma informação é salva. Tudo roda no seu navegador.</span>
+                </p>
+            </div>
+
+            <div v-for="(category, catIndex) in categories" :key="category.id" class="space-y-4">
+                <div class="flex items-end justify-between border-b border-white/10 pb-2">
+                    <h2 class="text-xl font-bold text-white flex items-center">
+                        <span class="bg-brand-surface text-brand-accent text-xs font-mono px-2 py-1 rounded mr-3">{{ (catIndex + 1).toString().padStart(2, '0') }}</span>
+                        {{ category.name }}
+                    </h2>
+                    <span class="text-xs text-brand-muted font-mono">BASE36: {{ getSectionHash(catIndex) }}</span>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label v-for="(option, optIndex) in category.options" :key="optIndex" class="checkbox-wrapper cursor-pointer group">
+                        <input type="checkbox" 
+                               class="hidden" 
+                               :value="optIndex" 
+                               v-model="selections[catIndex]">
+                        <div class="flex items-center p-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-200">
+                            <div class="w-5 h-5 rounded border border-gray-500 mr-3 flex items-center justify-center group-hover:border-brand-accent transition-colors">
+                                <i class="fa-solid fa-check text-xs opacity-0 group-hover:opacity-50 input-check"></i>
+                            </div>
+                            <span class="text-sm font-medium">{{ option }}</span>
+                        </div>
+                    </label>
+
+                    <label class="checkbox-wrapper cursor-pointer group">
+                        <input type="checkbox" class="hidden" v-model="customFlags[catIndex]">
+                        <div class="flex items-center p-3 rounded-lg border border-dashed border-white/30 bg-transparent hover:bg-white/5 transition-all duration-200">
+                            <div class="w-5 h-5 rounded border border-gray-500 mr-3 flex items-center justify-center">
+                                <i class="fa-solid fa-plus text-xs opacity-0 group-hover:opacity-50"></i>
+                            </div>
+                            <span class="text-sm font-medium italic text-brand-muted group-hover:text-white">Outro / Personalizado</span>
+                        </div>
+                    </label>
+                </div>
+
+                <div v-if="customFlags[catIndex]" class="mt-2 animate-pulse-slow">
+                    <input type="text" 
+                           v-model="customInputs[catIndex]"
+                           placeholder="Digite seu interesse específico (ex: numismática, dark-jazz)..."
+                           class="w-full bg-brand-dark border border-brand-accent/50 rounded-lg p-3 text-brand-accent placeholder-brand-muted/50 focus:outline-none focus:ring-2 focus:ring-brand-accent transition-all font-mono text-sm">
+                    <p class="text-xs text-brand-muted mt-1 ml-1"><i class="fa-solid fa-circle-info mr-1"></i>Isso gerará tags adicionais.</p>
+                </div>
+            </div>
+
+            <div class="fixed bottom-0 left-0 w-full bg-brand-surface/95 backdrop-blur-lg border-t border-brand-accent/20 p-6 shadow-2xl z-40 transform transition-transform duration-300">
+                <div class="max-w-3xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+                    
+                    <div class="flex-grow text-center md:text-left w-full">
+                        <p class="text-xs text-brand-muted uppercase tracking-widest mb-1">Sua Assinatura Digital</p>
+                        <div class="relative group cursor-pointer" @click="copyToClipboard">
+                            <div class="text-3xl md:text-4xl font-mono font-bold text-brand-accent break-all bg-black/30 p-2 rounded border border-brand-accent/30 hover:bg-brand-accent/10 transition-colors">
+                                {{ fullHash }}
+                            </div>
+                            <div class="absolute -top-8 left-1/2 md:left-0 transform -translate-x-1/2 md:translate-x-0 bg-brand-accent text-brand-dark text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                Clique para Copiar
+                            </div>
+                        </div>
+                        
+                        <div v-if="hasCustomTags" class="mt-2 flex flex-wrap gap-2 justify-center md:justify-start">
+                            <span v-for="tag in formattedCustomTags" class="text-xs font-mono text-blue-300 bg-blue-900/30 px-2 py-1 rounded">
+                                {{ tag }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2 w-full md:w-auto min-w-[200px]">
+                        <button @click="copyFullBlock" class="w-full bg-brand-accent hover:bg-brand-accentHover text-brand-dark font-bold py-3 px-6 rounded-lg transition-all shadow-lg shadow-brand-accent/20 flex items-center justify-center">
+                            <i class="fa-regular fa-copy mr-2"></i> Copiar Tudo
+                        </button>
+                        <div class="flex gap-2">
+                            <a :href="'https://twitter.com/search?q=%23' + pureHash" target="_blank" class="flex-1 bg-white/10 hover:bg-white/20 text-white py-2 rounded text-center transition-colors">
+                                <i class="fa-brands fa-x-twitter"></i>
+                            </a>
+                            <a :href="'https://www.instagram.com/explore/tags/' + pureHash" target="_blank" class="flex-1 bg-white/10 hover:bg-white/20 text-white py-2 rounded text-center transition-colors">
+                                <i class="fa-brands fa-instagram"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                // DEFINIÇÃO DAS CATEGORIAS (HARDCODED PARA PADRONIZAÇÃO)
+                const categories = ref([
+                    {
+                        id: 'drive',
+                        name: 'O que te move? (Essência)',
+                        options: ['Conhecimento / Ciência', 'Arte / Criatividade', 'Justiça / Ativismo', 'Empreender / Negócios', 'Espiritualidade', 'Lazer / Estilo de Vida']
+                    },
+                    {
+                        id: 'tribe',
+                        name: 'Sua Tribo Cultural',
+                        options: ['Geek / Tech', 'Underground / Alt', 'Mainstream / Pop', 'Acadêmico / Intelectual', 'Natureza / Outdoor', 'Esportes / Fitness']
+                    },
+                    {
+                        id: 'social',
+                        name: 'Estilo de Interação',
+                        options: ['Observador (Lurker)', 'Debatedor', 'Pragmático (Trocas)', 'Lúdico (Memes/Fun)', 'Mentor', 'Aprendiz']
+                    },
+                    {
+                        id: 'topic',
+                        name: 'Interesses Chave',
+                        options: ['Tecnologia / IA', 'Política / Economia', 'Games / Anime', 'Música / Cinema', 'História / Ocultismo', 'Viagens / Gastronomia']
+                    }
+                ]);
+
+                // Estado das seleções
+                // Cria array de arrays vazio baseado no numero de categorias
+                const selections = ref(categories.value.map(() => []));
+                const customFlags = ref(categories.value.map(() => false));
+                const customInputs = ref(categories.value.map(() => ''));
+
+                // --- LÓGICA CORE (ALGORITMO HASHTRIBES) ---
+                
+                // Converte um número para Base36 e garante 2 digitos (padding)
+                // Ex: 10 -> "0A", 1295 -> "ZZ"
+                const toBase36 = (num) => {
+                    return num.toString(36).toUpperCase().padStart(2, '0');
+                };
+
+                // Calcula o hash de uma seção especifica
+                const getSectionHash = (index) => {
+                    let sum = 0;
+                    
+                    // Soma bits das opções (1, 2, 4, 8...)
+                    selections.value[index].forEach(optIndex => {
+                        sum += Math.pow(2, optIndex);
+                    });
+
+                    // Se marcou "Outro", adiciona o bit mais alto (Bit 6 neste caso, valor 64)
+                    // Ajuste conforme numero de opções. 6 opções ocupam bits 0-5. Bit 6 é o próximo.
+                    if (customFlags.value[index]) {
+                        sum += Math.pow(2, categories.value[index].options.length);
+                    }
+
+                    return toBase36(sum);
+                };
+
+                // Hash Pura (Só o código)
+                const pureHash = computed(() => {
+                    let code = "HT"; // Prefixo HashTribes
+                    categories.value.forEach((_, index) => {
+                        code += getSectionHash(index);
+                    });
+                    return code;
+                });
+
+                // Tags Customizadas formatadas
+                const formattedCustomTags = computed(() => {
+                    let tags = [];
+                    customInputs.value.forEach((text, index) => {
+                        if (customFlags.value[index] && text.trim() !== '') {
+                            // Limpa espaços e caracteres especiais para virar hashtag
+                            const clean = text.trim().replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+                            if(clean) tags.push('#' + clean);
+                        }
+                    });
+                    return tags;
+                });
+
+                // Hash Completa para Exibição
+                const fullHash = computed(() => {
+                    return '#' + pureHash.value;
+                });
+
+                const hasCustomTags = computed(() => formattedCustomTags.value.length > 0);
+
+                // --- AÇÕES ---
+
+                const copyToClipboard = () => {
+                    navigator.clipboard.writeText(fullHash.value);
+                    alert('Hashtag copiada: ' + fullHash.value);
+                };
+
+                const copyFullBlock = () => {
+                    let text = `Minha identidade HashTribes: ${fullHash.value}`;
+                    if (hasCustomTags.value) {
+                        text += ` ${formattedCustomTags.value.join(' ')}`;
+                    }
+                    text += `\n\nEncontre sua tribo em: hashtribes.web.app`; // URL fictícia de exemplo
+                    navigator.clipboard.writeText(text);
+                    alert('Bloco completo copiado para a área de transferência!');
+                };
+
+                return {
+                    categories,
+                    selections,
+                    customFlags,
+                    customInputs,
+                    getSectionHash,
+                    pureHash,
+                    fullHash,
+                    formattedCustomTags,
+                    hasCustomTags,
+                    copyToClipboard,
+                    copyFullBlock
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
