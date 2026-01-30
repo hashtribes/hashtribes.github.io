@@ -3,6 +3,8 @@
 > **Protocolo Descentralizado de Identidade Social** > *Não crie uma nova rede social. Hackeie as existentes.*
 
 ![Status](https://img.shields.io/badge/Status-Alpha-blue) ![License](https://img.shields.io/badge/License-Apache--2.0-orange) ![Tech](https://img.shields.io/badge/Stack-Vue3%20%7C%20Tailwind-purple)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate/?hosted_button_id=EVRFUYZ6HFPT2)
+
 
 ## 📄 Sobre o Projeto
 
